@@ -8,7 +8,7 @@ print_usage() {
 
 	echo "
 usage:
-	$0 [-o OUTPUT_THEME_NAME] [-c COLOR] PRESET_NAME_OR_PATH
+	$0 [-o OUTPUT_THEME_NAME] [-c COLOR] [-d DEST_DIR] PRESET_NAME_OR_PATH
 
 examples:
 	$0 -o droid_test_3 -c 5e468c
@@ -55,6 +55,10 @@ do
 			OUTPUT_THEME_NAME="$2"
 			shift
 			;;
+		-d|--destdir)
+			output_dir="$2"
+			shift
+			;;
 		-c|--color)
 			ICONS_COLOR="${2#\#}"  # remove leading hash symbol
 			shift
@@ -99,7 +103,7 @@ trap post_clean_up EXIT SIGHUP SIGINT SIGTERM
 : "${ICONS_COLOR:=$SEL_BG}"
 : "${OUTPUT_THEME_NAME:=oomox-$THEME}"
 
-output_dir="$HOME/.icons/$OUTPUT_THEME_NAME"
+output_dir="${output_dir:-$HOME/.icons/$OUTPUT_THEME_NAME}"
 
 light_folder_fallback="$ICONS_COLOR"
 medium_base_fallback="$(darker "$ICONS_COLOR" 20)"
@@ -116,23 +120,23 @@ echo ":: Copying theme template..."
 cp -R "$root/papirus-icon-theme/Papirus" "$tmp_dir/"
 echo "== Template was copied to $tmp_dir"
 
-
+#[red]="       #e25252 #bf4b4b #4f1d1d #e4e4e4"
 echo ":: Replacing accent colors..."
 for size in 22x22 24x24 32x32 48x48 64x64; do
 	for icon_path in \
-		"$tmp_dir/Papirus/$size/places/folder-custom"{-*,}.svg \
-		"$tmp_dir/Papirus/$size/places/user-custom"{-*,}.svg
+		"$tmp_dir/Papirus/$size/places/folder-red"{-*,}.svg \
+		"$tmp_dir/Papirus/$size/places/user-red"{-*,}.svg
 	do
 		[ -f "$icon_path" ] || continue  # it's a file
 		[ -L "$icon_path" ] && continue  # it's not a symlink
 
-		new_icon_path="${icon_path/-custom/-oomox}"
+		new_icon_path="${icon_path/-red/-oomox}"
 		icon_name="${new_icon_path##*/}"
 		symlink_path="${new_icon_path/-oomox/}"  # remove color suffix
 
-		sed -e "s/value_light/$ICONS_LIGHT_FOLDER/g" \
-			-e "s/value_dark/$ICONS_MEDIUM/g" \
-			-e "s/323232/$ICONS_DARK/g" "$icon_path" > "$new_icon_path"
+		sed -e "s/#e25252/#$ICONS_LIGHT_FOLDER/g" \
+			-e "s/#bf4b4b/#$ICONS_MEDIUM/g" \
+			-e "s/#4f1d1d/#$ICONS_DARK/g" "$icon_path" > "$new_icon_path"
 
 		ln -sf "$icon_name" "$symlink_path"
 	done

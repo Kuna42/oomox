@@ -1,13 +1,22 @@
 Themix GUI designer
 =====
 
-[![Code Style](https://github.com/themix-project/oomox/actions/workflows/ci.yml/badge.svg)](https://github.com/themix-project/oomox/actions/workflows/ci.yml)
+[![Code Style](https://github.com/themix-project/oomox/actions/workflows/ci.yml/badge.svg)](https://github.com/themix-project/oomox/actions/workflows/ci.yml) [![Commit Activity](https://img.shields.io/github/commit-activity/y/themix-project/themix-gui?color=pink&logo=amp&logoColor=pink)](https://github.com/themix-project/themix-gui/graphs/commit-activity)
 
-Graphical application for generating different color variations of Oomox (Numix-based) and Materia (ex-Flat-Plat) themes (GTK2, GTK3, Cinnamon, GNOME, Openbox, Xfwm), Archdroid, Gnome-Color, Numix, Papirus and Suru++ icon themes. Have a hack for HiDPI in gtk2.
+Graphical application for designing themes and exporting them using plugins, for example:
+  * [Oomox](https://github.com/themix-project/oomox-gtk-theme/) and [Materia](https://github.com/nana-4/materia-theme/) themes (GTK2, GTK3, Cinnamon, GNOME, Openbox, Xfwm). Have a hack for HiDPI in gtk2.
+  * Icons ([Archdroid](https://github.com/GreenRaccoon23/archdroid-icon-theme), [Gnome-Colors](https://www.gnome-look.org/p/1012497), [Numix](https://github.com/numixproject/numix-folders), [Papirus](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme), [Suru++](https://github.com/gusbemacbe/suru-plus) and [Suru++ Asprómauros](https://github.com/gusbemacbe/suru-plus-aspromauros)).
+  * Base16 plugin, which  also allows a lot of app themes support like Alacritty, Emacs, GTK4, KDE, VIM and [many](https://github.com/chriskempson/base16-templates-source) more.
+
+Import plugins also available, such as:
+  * generating color palettes from image;
+  * importing it from Xresources;
+  * or [huge](https://github.com/chriskempson/base16-schemes-source/) collection of Base16 themes.
 
 <a href="https://aur.archlinux.org/packages/themix-full-git"><img src="https://raw.githubusercontent.com/themix-project/oomox/master/packaging/download_aur.png" height="54"></a>
-<a href="https://slackbuilds.org/repository/14.2/desktop/oomox/"><img src="https://raw.githubusercontent.com/themix-project/oomox/master/packaging/download_slackware.png" height="54"></a>
+<a href="https://slackbuilds.org/result/?search=oomox&sv="><img src="https://raw.githubusercontent.com/themix-project/oomox/master/packaging/download_slackware.png" height="54"></a>
 <a href="https://flathub.org/apps/details/com.github.themix_project.Oomox"><img src="https://flathub.org/assets/badges/flathub-badge-en.png" height="54"></a>
+<a href="https://github.com/Botspot/pi-apps"><img src="https://github.com/Botspot/pi-apps/blob/master/icons/badge.png?raw=true" height="53" style="border-radius: 9px; border: 1px #bbb solid;"></a>
 
 
 Table of contents:
@@ -15,6 +24,7 @@ Table of contents:
   * [Installing manually](#other-distributions "")
   * [Using with tiling WMs](#using-with-tiling-wms "")
   * [Extra GTK3 CSS hacks](#extra-gtk3-css-hacks "")
+  * [CLI](#cli "")
   * [Spotify](#spotify "")
   * [Review videos/Usage instructions](#review-articles-and-videos "")
 
@@ -45,7 +55,7 @@ AUR helpers are [not officially supported by Arch Linux](https://wiki.archlinux.
 #### Open the GUI
 
 ```
-oomox-gui
+themix-gui
 ```
 
 
@@ -88,7 +98,7 @@ For older releases install the dependencies manually and next follow general ins
 #### Prerequisites
 
 For GUI app itself:
- - `python3>=3.6`
+ - `python3>=3.10`
  - `gtk3>=3.18`
  - `python3-gobject`
  - `gdk-pixbuf2`
@@ -105,7 +115,7 @@ Oomox theme:
  - `find`
  - `grep`
 
-Materia theme:
+Materia theme (deprecated):
  - `sassc>=3.4`
  - `glib-compile-schemas` from `glib2`
  - `gdk-pixbuf2`
@@ -114,7 +124,7 @@ Materia theme:
  - `grep`
  - `optipng`
  - `gtk2-engine-murrine`
- - `resvg` or `inkscape`
+ - `inkscape` (or `resvg`, but it's currently disabled)
  - `parallel`
  - `meson`
 
@@ -140,6 +150,9 @@ Spotify theme:
 
 Import colors from images:
  - `python3 PIL or Pillow`
+ - `python3 colorz` - optional, extra image analyzer
+ - `python3 colorthief` - optional, extra image analyzer
+ - `python3 haishoku` - optional, extra image analyzer
 
 Base16 format support:
  - `python3 pystache`
@@ -164,7 +177,7 @@ make -f po.mk install
 ./gui.sh
 ```
 
-After exporting a theme select the generated theme (oomox-YOUR-THEME-NAME) in your appearance config tool (for example, _lxappearance_ or _gnome-tweak-tool_).
+After exporting a theme select the generated theme (oomox-YOUR-THEME-NAME) in your appearance config tool (for example, `lxappearance` or `gnome-tweak-tool`).
 
 
 ### CLI

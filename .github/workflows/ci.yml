@@ -2,13 +2,13 @@ name: Code Style
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, mypy ]
   pull_request:
     branches: [ master ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: ${{ matrix.PYVER }}
     strategy:
       fail-fast: false
@@ -18,21 +18,20 @@ jobs:
             SKIP_SHELLCHECK: 0
             SKIP_MYPY: 0
             SKIP_VULTURE: 0
+            SKIP_RUFF: 0
 
-          - PYVER: python36_ubuntu_1804
+          - PYVER: python310_ubuntu_2204
             SKIP_SHELLCHECK: 1
             SKIP_MYPY: 1
             SKIP_VULTURE: 1
+            SKIP_RUFF: 1
 
-          - PYVER: python38_ubuntu_2004
-            SKIP_SHELLCHECK: 1
-            SKIP_MYPY: 1
-            SKIP_VULTURE: 1
     env:
       PYVER: ${{ matrix.PYVER }}
       SKIP_SHELLCHECK: ${{ matrix.SKIP_SHELLCHECK }}
       SKIP_MYPY: ${{ matrix.SKIP_MYPY }}
       SKIP_VULTURE: ${{ matrix.SKIP_VULTURE }}
+      SKIP_RUFF: ${{ matrix.SKIP_RUFF }}
 
     steps:
     - uses: actions/checkout@v2
@@ -51,5 +50,6 @@ jobs:
         -e SKIP_SHELLCHECK=${SKIP_SHELLCHECK}
         -e SKIP_MYPY=${SKIP_MYPY}
         -e SKIP_VULTURE=${SKIP_VULTURE}
+        -e SKIP_RUFF=${SKIP_RUFF}
         oomox:latest
-        ./maintenance_scripts/run_ci.sh
+        ./maintenance_scripts/lint.sh

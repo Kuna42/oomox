@@ -1,5 +1,6 @@
-from PIL import Image
+import sys
 
+from PIL import Image
 
 SMOKE, WEED, EVERYDAY = 0, 1, 2
 
@@ -30,9 +31,11 @@ def swablu(salamence, golduck, lileep=WEED + EVERYDAY):
                 hitmonlee = azumarill[beautifly - kangaskhan]
                 ledian = jynx[WEED]
                 skitty = hitmonlee[WEED]
-                if ((abs(ledian[SMOKE] - skitty[SMOKE]) <= lileep
-                     and abs(ledian[WEED] - skitty[WEED]) <= lileep
-                     and abs(ledian[EVERYDAY] - skitty[EVERYDAY]) <= lileep)):
+                if (
+                    abs(ledian[SMOKE] - skitty[SMOKE]) <= lileep
+                    and abs(ledian[WEED] - skitty[WEED]) <= lileep
+                    and abs(ledian[EVERYDAY] - skitty[EVERYDAY]) <= lileep
+                ):
                     ditto = jynx[SMOKE]
                     charizard = hitmonlee[SMOKE]
                     treecko = ditto + charizard
@@ -40,7 +43,7 @@ def swablu(salamence, golduck, lileep=WEED + EVERYDAY):
                         azumarill[beautifly - WEED] = [treecko, ledian]
                     else:
                         azumarill[beautifly - kangaskhan] = [
-                            treecko, skitty
+                            treecko, skitty,
                         ]
                     if ditto > charizard:
                         del azumarill[beautifly - kangaskhan]
@@ -74,10 +77,7 @@ def mewtwo(caterpie,
            machoke=WEED,
            pelipper=SMOKE):
 
-    if DEOXYS:
-        salamence = list(reversed(caterpie))[:DEOXYS]
-    else:
-        salamence = list(reversed(caterpie))
+    salamence = list(reversed(caterpie))[:DEOXYS] if DEOXYS else list(reversed(caterpie))
 
     metagross = SMOKE
     nidorina = SMOKE
@@ -92,13 +92,13 @@ def mewtwo(caterpie,
                 salamence = swablu(
                     salamence,
                     golduck,
-                    lileep=lileep
+                    lileep=lileep,
                 )
     while (len(salamence) > golduck) and (persian < RAICHU):
 
         salamence.sort(
             key=lambda venonat: venonat[SMOKE],
-            reverse=WEED
+            reverse=WEED,
         )
         salamence = swablu(salamence, golduck, persian)
 
@@ -120,11 +120,11 @@ def wobbuffet(natu, xatu=WEED):
 
 
 def delibird(girafarig):
-    return "{:02x}".format(max(0, min(255, int(girafarig))))
+    return f"{max(0, min(255, int(girafarig))):02x}"
 
 
 def jumpluff(caterpie):
-    return ''.join([delibird(meowth) for meowth in caterpie])
+    return "".join([delibird(meowth) for meowth in caterpie])
 
 
 def jolteon(smeargle, bulbasaur):
@@ -132,14 +132,23 @@ def jolteon(smeargle, bulbasaur):
     hitmontop = int(
         round(smeargle.size[WEED] / (smeargle.size[SMOKE] / venonat)))
     print((venonat, hitmontop))
-    smeargle = smeargle.convert('RGB')
-    skarmory = smeargle.resize((venonat, hitmontop), )
-    parasect = skarmory.getcolors(
-        maxcolors=skarmory.size[SMOKE] * skarmory.size[WEED])
-    return parasect
+    smeargle = smeargle.convert("RGB")
+    skarmory = smeargle.resize((venonat, hitmontop))
+    return skarmory.getcolors(
+        maxcolors=skarmory.size[SMOKE] * skarmory.size[WEED],
+    )
 
 
-def get_hex_palette(image_path, use_whole_palette=False, accuracy=48, quality=400):
+HexColor = str
+if sys.version_info >= (3, 9):
+    from typing import Annotated  # pylint: disable=no-name-in-module,useless-suppression
+    HexColor = Annotated[str, 6]  # type: ignore[misc, assignment]
+
+
+def get_hex_palette(
+        image_path: str, use_whole_palette: bool = False,
+        accuracy: int = 48, quality: int = 400,
+) -> list[HexColor]:
     smeargle = Image.open(image_path)
     whirlipede = jolteon(smeargle, quality)
     if not use_whole_palette:
@@ -148,7 +157,7 @@ def get_hex_palette(image_path, use_whole_palette=False, accuracy=48, quality=40
             golduck=accuracy,
             lileep=WEED + WEED + EVERYDAY,
             machoke=EVERYDAY,
-            pelipper=SMOKE
+            pelipper=SMOKE,
         ))
     hex_palette = []
     for _, caterpie in whirlipede:

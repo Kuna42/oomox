@@ -6,7 +6,7 @@ root="$(readlink -f "$(dirname "$0")")"
 print_usage() {
 	echo "
 usage:
-	$0 [-o OUTPUT_THEME_NAME] [-c COLOR] PRESET_NAME_OR_PATH
+	$0 [-o OUTPUT_THEME_NAME] [-c COLOR] [-d DEST_DIR] PRESET_NAME_OR_PATH
 
 examples:
 	$0 -o droid_test_3 -c 5e468c
@@ -51,12 +51,15 @@ do
 	case ${1} in
 		-h|--help)
 			print_usage
-			exit 0
 		;;
 		-o|--output)
 			OUTPUT_THEME_NAME="${2}"
 			shift
 		;;
+		-d|--destdir)
+			output_dir="$2"
+			shift
+			;;
 		-c|--color)
 			ICONS_ARCHDROID="${2}"
 			shift
@@ -65,7 +68,6 @@ do
 			if [[ "${1}" == -* ]] || [[ ${THEME-} ]]; then
 				echo "unknown option ${1}"
 				print_usage
-				exit 2
 			fi
 			THEME="${1}"
 		;;
@@ -91,7 +93,7 @@ fi
 
 
 OUTPUT_THEME_NAME="${OUTPUT_THEME_NAME-oomox-$THEME-flat}"
-output_dir="${HOME}/.icons/${OUTPUT_THEME_NAME}"
+output_dir="${output_dir:-$HOME/.icons/$OUTPUT_THEME_NAME}"
 
 tmp_dir="$(mktemp -d)"
 function post_clean_up {

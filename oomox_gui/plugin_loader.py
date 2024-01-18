@@ -1,54 +1,53 @@
 import os
 import traceback
+from typing import ClassVar
 
 from gi.repository import Gtk
 
-from .i18n import translate
 from .config import PLUGINS_DIR, USER_PLUGINS_DIR
+from .helpers import get_plugin_module, log_error
+from .i18n import translate
 from .plugin_api import (
+    OomoxExportPlugin,
+    OomoxIconsPlugin,
+    OomoxImportPlugin,
     OomoxPlugin,
-    OomoxImportPlugin, OomoxThemePlugin, OomoxIconsPlugin, OomoxExportPlugin,
+    OomoxThemePlugin,
 )
-from .helpers import get_plugin_module
-
-
-from typing import TYPE_CHECKING  # pylint: disable=wrong-import-order
-if TYPE_CHECKING:
-    from typing import Dict  # noqa
 
 
 class PluginLoader:
 
-    _ALL_PLUGINS: "Dict[str, OomoxPlugin]" = {}
-    _THEME_PLUGINS: "Dict[str, OomoxPlugin]" = {}
-    _ICONS_PLUGINS: "Dict[str, OomoxPlugin]" = {}
-    _EXPORT_PLUGINS: "Dict[str, OomoxPlugin]" = {}
-    _IMPORT_PLUGINS: "Dict[str, OomoxPlugin]" = {}
+    _ALL_PLUGINS: ClassVar[dict[str, OomoxPlugin]] = {}
+    _THEME_PLUGINS: ClassVar[dict[str, OomoxThemePlugin]] = {}
+    _ICONS_PLUGINS: ClassVar[dict[str, OomoxIconsPlugin]] = {}
+    _EXPORT_PLUGINS: ClassVar[dict[str, OomoxExportPlugin]] = {}
+    _IMPORT_PLUGINS: ClassVar[dict[str, OomoxImportPlugin]] = {}
 
     _init_done = False
 
     @classmethod
-    def get_all_plugins(cls):
+    def get_all_plugins(cls) -> dict[str, OomoxPlugin]:
         cls.init_plugins()
         return cls._ALL_PLUGINS
 
     @classmethod
-    def get_theme_plugins(cls):
+    def get_theme_plugins(cls) -> dict[str, OomoxThemePlugin]:
         cls.init_plugins()
         return cls._THEME_PLUGINS
 
     @classmethod
-    def get_icons_plugins(cls):
+    def get_icons_plugins(cls) -> dict[str, OomoxIconsPlugin]:
         cls.init_plugins()
         return cls._ICONS_PLUGINS
 
     @classmethod
-    def get_export_plugins(cls):
+    def get_export_plugins(cls) -> dict[str, OomoxExportPlugin]:
         cls.init_plugins()
         return cls._EXPORT_PLUGINS
 
     @classmethod
-    def get_import_plugins(cls):
+    def get_import_plugins(cls) -> dict[str, OomoxImportPlugin]:
         cls.init_plugins()
         return cls._IMPORT_PLUGINS
 
@@ -56,7 +55,7 @@ class PluginLoader:
     def load_plugin(cls, plugin_name: str, plugin_path: str) -> None:
         plugin_module = get_plugin_module(
             plugin_name,
-            os.path.join(plugin_path, "oomox_plugin.py")
+            os.path.join(plugin_path, "oomox_plugin.py"),
         )
         plugin_class = plugin_module.Plugin
         plugin = plugin_class()
@@ -88,26 +87,25 @@ class PluginLoader:
                 cls.load_plugin(plugin_name, plugin_path)
             except Exception as exc:
                 message_header = translate('Error loading plugin "{plugin_name}"').format(
-                    plugin_name=plugin_name
+                    plugin_name=plugin_name,
                 )
                 message_text = (
                     plugin_path +
-                    ":\n" + '\n'.join([str(arg) for arg in exc.args]) +
-                    '\n' * 2 +
+                    ":\n" + "\n".join([str(arg) for arg in exc.args]) +
+                    "\n" * 2 +
                     traceback.format_exc()
                 )
-                # @TODO: have no clue why gtk dialogs stopped working here,
-                # but guess that's just gtk traditions to break things once in a while
-                print(f"{message_header}\n{message_text}")
-                error_dialog = Gtk.MessageDialog()
-                error_dialog.text = message_header
-                error_dialog.secondary_text = message_text
-                error_dialog.buttons = Gtk.ButtonsType.CLOSE
+                log_error(f"{message_header}\n{message_text}")
+                error_dialog = Gtk.MessageDialog(
+                    text=message_header,
+                    secondary_text=message_text,
+                    buttons=Gtk.ButtonsType.CLOSE,
+                )
                 error_dialog.run()
                 error_dialog.destroy()
 
 
-def _print_debug_plugins():
+def _print_debug_plugins() -> None:
     # @TODO: remove debug code:
     plugin_loader = PluginLoader()
     print("MAIN:")
@@ -126,7 +124,7 @@ def _print_debug_plugins():
     print()
     for plugin_name, plugin in plugin_loader.get_all_plugins().items():
         print(
-            f"{plugin_name}: {plugin.display_name}"
+            f"{plugin_name}: {plugin.display_name}",
         )
 
 

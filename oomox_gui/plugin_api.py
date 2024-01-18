@@ -1,25 +1,28 @@
 import os
 from abc import ABCMeta, abstractmethod
 from enum import Enum
+from typing import TYPE_CHECKING, ClassVar
 
 from .config import FALLBACK_COLOR, USER_COLORS_DIR
 
-
-from typing import TYPE_CHECKING  # pylint: disable=wrong-import-order
 if TYPE_CHECKING:
-    from typing import List, Iterable, Optional, Callable  # noqa
-    from typing_extensions import TypedDict  # noqa
+    from collections.abc import Callable, Iterable
+    from typing import Final
 
-    from .export_common import ExportDialog  # noqa
-    from .preview import ThemePreview  # noqa
-    from .preview_icons import IconThemePreview  # noqa
+    from typing_extensions import TypedDict
 
-    from .theme_model import ThemeModelValue  # noqa
-    from .theme_file_parser import ColorScheme  # noqa
-    AboutLink = TypedDict('AboutLink', {'name': str, 'url': str})
+    from .export_common import ExportDialog
+    from .preview import ThemePreview
+    from .preview_icons import IconThemePreview
+    from .theme_file import ThemeT
+    from .theme_model import ThemeModelValue
+
+    class AboutLink(TypedDict):
+        name: str
+        url: str
 
 
-PLUGIN_PATH_PREFIX = "__plugin__"
+PLUGIN_PATH_PREFIX: "Final" = "__plugin__"
 
 
 class OomoxPlugin(metaclass=ABCMeta):
@@ -34,8 +37,8 @@ class OomoxPlugin(metaclass=ABCMeta):
     def display_name(self) -> str:
         pass
 
-    about_text = None  # type: Optional[str]
-    about_links = None  # type: Optional[List[AboutLink]]
+    about_text: str | None = None
+    about_links: ClassVar["list[AboutLink] | None"] = None
 
 
 class OomoxThemePlugin(OomoxPlugin):
@@ -52,44 +55,47 @@ class OomoxThemePlugin(OomoxPlugin):
 
     @property
     @abstractmethod
-    def export_dialog(self) -> 'ExportDialog':
+    def export_dialog(self) -> "type[ExportDialog]":
         pass
 
-    enabled_keys_gtk = []  # type: List[str]
-    enabled_keys_options = []  # type: List[str]
-    enabled_keys_extra = []  # type: List[str]
+    enabled_keys_gtk: ClassVar[list[str]] = []
+    enabled_keys_options: ClassVar[list[str]] = []
+    enabled_keys_extra: ClassVar[list[str]] = []
 
-    theme_model_gtk = []  # type: List[ThemeModelValue]
-    theme_model_options = []  # type: List[ThemeModelValue]
-    theme_model_extra = []  # type: List[ThemeModelValue]
+    theme_model_gtk: ClassVar["list[ThemeModelValue]"] = []
+    theme_model_options: ClassVar["list[ThemeModelValue]"] = []
+    theme_model_extra: ClassVar["list[ThemeModelValue]"] = []
 
     def preview_before_load_callback(
-            self, preview_object: 'ThemePreview', colorscheme: 'ColorScheme'
+            self, preview_object: "ThemePreview", colorscheme: "ThemeT",
     ) -> None:
         pass
 
     class PreviewImageboxesNames(Enum):
-        CHECKBOX = 'checkbox-checked'
+        CHECKBOX = "checkbox-checked"
 
-    preview_sizes = {
+    preview_sizes: ClassVar[dict[str, int]] = {
         PreviewImageboxesNames.CHECKBOX.name: 16,
     }
 
-    def preview_transform_function(self, svg_template: str, colorscheme: 'ColorScheme') -> str:
-        # pylint: disable=no-self-use
+    def preview_transform_function(
+            self,  # noqa: PLR6301
+            svg_template: str,
+            colorscheme: "ThemeT",
+    ) -> str:
         for key in (
                 "SEL_BG", "SEL_FG", "ACCENT_BG", "TXT_BG", "BG", "FG",
         ):
             svg_template = svg_template.replace(
-                f"%{key}%", str(colorscheme.get(key) or FALLBACK_COLOR)
+                f"%{key}%", str(colorscheme.get(key) or FALLBACK_COLOR),
             )
         return svg_template
 
 
 class OomoxIconsPlugin(OomoxPlugin):
 
-    enabled_keys_icons = []  # type: List[str]
-    theme_model_icons = []  # type: List[ThemeModelValue]
+    enabled_keys_icons: ClassVar[list[str]] = []
+    theme_model_icons: ClassVar["list[ThemeModelValue]"] = []
 
     @property
     @abstractmethod
@@ -98,15 +104,15 @@ class OomoxIconsPlugin(OomoxPlugin):
 
     @property
     @abstractmethod
-    def export_dialog(self) -> 'ExportDialog':
+    def export_dialog(self) -> "type[ExportDialog]":
         pass
 
     @abstractmethod
-    def preview_transform_function(self, svg_template: str, colorscheme: 'ColorScheme') -> str:
+    def preview_transform_function(self, svg_template: str, colorscheme: "ThemeT") -> str:
         pass
 
     def preview_before_load_callback(
-            self, preview_object: 'IconThemePreview', colorscheme: 'ColorScheme'
+            self, preview_object: "IconThemePreview", colorscheme: "ThemeT",
     ) -> None:
         pass
 
@@ -115,15 +121,15 @@ class OomoxExportPlugin(OomoxPlugin):
 
     @property
     @abstractmethod
-    def export_dialog(self) -> 'ExportDialog':
+    def export_dialog(self) -> "type[ExportDialog]":
         pass
 
     # Text to display in export menu:
-    export_text = None  # type: Optional[str]
+    export_text: str | None = None
 
-    theme_model_extra = []  # type: List[ThemeModelValue]
+    theme_model_extra: ClassVar["list[ThemeModelValue]"] = []
 
-    shortcut = None  # type: Optional[str]
+    shortcut: str | None = None
 
 
 class OomoxImportPlugin(OomoxPlugin):
@@ -131,29 +137,29 @@ class OomoxImportPlugin(OomoxPlugin):
     is_async = False
 
     @abstractmethod
-    def read_colorscheme_from_path(self, preset_path: str) -> 'ColorScheme':
+    def read_colorscheme_from_path(self, preset_path: str) -> "ThemeT":
         pass
 
     # Text to display in import menu:
-    import_text = None  # type: Optional[str]
+    import_text: str | None = None
 
     # Text to name section of user presets imported with the plugin:
-    user_presets_display_name = None  # type: Optional[str]
+    user_presets_display_name: str | None = None
 
     # supported file extensions for filechooser dialog
-    file_extensions = []  # type: Iterable[str]
+    file_extensions: ClassVar["Iterable[str]"] = []
 
-    plugin_theme_dir = None  # type: Optional[str]
+    plugin_theme_dir: str | None = None
 
-    theme_model_import = []  # type: List[ThemeModelValue]
+    theme_model_import: ClassVar["list[ThemeModelValue]"] = []
 
     @property
     def user_theme_dir(self) -> str:
         return os.path.abspath(
-            os.path.join(USER_COLORS_DIR, PLUGIN_PATH_PREFIX + self.name)
+            os.path.join(USER_COLORS_DIR, PLUGIN_PATH_PREFIX + self.name),
         )
 
-    shortcut = None  # type: Optional[str]
+    shortcut: str | None = None
 
 
 class OomoxImportPluginAsync(OomoxImportPlugin):
@@ -162,6 +168,6 @@ class OomoxImportPluginAsync(OomoxImportPlugin):
 
     @abstractmethod
     def read_colorscheme_from_path(  # type: ignore[override] #  pylint: disable=arguments-differ
-            self, preset_path: str, callback: 'Callable[[ColorScheme,], None]'
+            self, preset_path: str, callback: "Callable[[ThemeT,], None]",
     ) -> None:
         pass

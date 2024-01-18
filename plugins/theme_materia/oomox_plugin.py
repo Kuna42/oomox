@@ -1,69 +1,68 @@
 import os
+from typing import TYPE_CHECKING
 
+from oomox_gui.color import convert_theme_color_to_gdk, mix_theme_colors
+from oomox_gui.export_common import CommonGtkThemeExportDialog
 from oomox_gui.i18n import translate
 from oomox_gui.plugin_api import OomoxThemePlugin
-from oomox_gui.export_common import CommonGtkThemeExportDialog, OPTION_GTK2_HIDPI
-from oomox_gui.color import convert_theme_color_to_gdk, mix_theme_colors
 
-OPTION_DEFAULT_PATH = 'default_path'
+if TYPE_CHECKING:
+    from typing import Any, Final
 
-PLUGIN_DIR = os.path.dirname(os.path.realpath(__file__))
-THEME_DIR = os.path.join(PLUGIN_DIR, "materia-theme/")
+    from gi.repository import Gtk
+
+    from oomox_gui.preview import ThemePreview
+    from oomox_gui.theme_file import ThemeT
+
+
+PLUGIN_DIR: "Final" = os.path.dirname(os.path.realpath(__file__))
+THEME_DIR: "Final" = os.path.join(PLUGIN_DIR, "materia-theme/")
 
 
 class MateriaThemeExportDialog(CommonGtkThemeExportDialog):
 
-    config_name = 'materia_theme'
+    config_name = "materia_theme"
     timeout = 1000
 
-    def do_export(self):
+    def do_export(self) -> None:
         export_path = os.path.expanduser(
-            self.option_widgets[OPTION_DEFAULT_PATH].get_text()
+            self.option_widgets[self.OPTIONS.DEFAULT_PATH].get_text(),
         )
-        new_destination_dir, theme_name = export_path.rsplit('/', 1)
+        new_destination_dir, theme_name = export_path.rsplit("/", 1)
         self.command = [
             "bash",
             os.path.join(THEME_DIR, "change_color.sh"),
-            "--hidpi", str(self.export_config[OPTION_GTK2_HIDPI]),
+            "--hidpi", str(self.export_config[self.OPTIONS.GTK2_HIDPI]),
             "--target", new_destination_dir,
             "--output", theme_name,
             self.temp_theme_path,
         ]
         super().do_export()
-        self.export_config[OPTION_DEFAULT_PATH] = new_destination_dir
-        self.export_config.save()
 
-    def __init__(self, transient_for, colorscheme, theme_name, **kwargs):
-        default_themes_path = os.path.join(os.environ['HOME'], '.themes')
+    def __init__(
+            self,
+            transient_for: "Gtk.Window",
+            colorscheme: "ThemeT",
+            theme_name: str,
+            **kwargs: "Any",
+    ) -> None:
         super().__init__(
             transient_for=transient_for,
             colorscheme=colorscheme,
             theme_name=theme_name,
-            add_options={
-                OPTION_DEFAULT_PATH: {
-                    'default': default_themes_path,
-                    'display_name': translate("Export _path: "),
-                },
-            },
-            **kwargs
-        )
-        self.option_widgets[OPTION_DEFAULT_PATH].set_text(
-            os.path.join(
-                self.export_config[OPTION_DEFAULT_PATH],
-                self.theme_name,
-            )
+            **kwargs,
         )
 
 
-def _monkeypatch_update_preview_colors(preview_object):
-    _monkeypatch_id = '_materia_update_colors_monkeypatched'
+def _monkeypatch_update_preview_colors(preview_object: "ThemePreview") -> None:
+    _monkeypatch_id = "_materia_update_colors_monkeypatched"
 
     if getattr(preview_object, _monkeypatch_id, None):
         return
 
     old_update_preview_colors = preview_object.update_preview_colors
 
-    def _update_preview_colors(colorscheme):
+    def _update_preview_colors(colorscheme: "ThemeT") -> None:
         old_update_preview_colors(colorscheme)
         if colorscheme["THEME_STYLE"] == "materia":
             preview_object.override_widget_color(
@@ -72,9 +71,9 @@ def _monkeypatch_update_preview_colors(preview_object):
                     mix_theme_colors(
                         colorscheme["SEL_BG"],
                         colorscheme["BG"],
-                        colorscheme["MATERIA_SELECTION_OPACITY"]
-                    )
-                )
+                        colorscheme["MATERIA_SELECTION_OPACITY"],
+                    ),
+                ),
             )
             preview_object.override_widget_color(
                 preview_object.gtk_preview.entry, preview_object.BG,
@@ -82,9 +81,9 @@ def _monkeypatch_update_preview_colors(preview_object):
                     mix_theme_colors(
                         colorscheme["FG"],
                         colorscheme["BG"],
-                        0.04
-                    )
-                )
+                        0.04,
+                    ),
+                ),
             )
 
     preview_object.update_preview_colors = _update_preview_colors
@@ -93,12 +92,19 @@ def _monkeypatch_update_preview_colors(preview_object):
 
 class Plugin(OomoxThemePlugin):
 
-    name = 'materia'
-    display_name = 'Materia'
+    name = "materia"
+    display_name = "Materia"
     description = (
-        'GTK+2, GTK+3\n'
-        'Cinnamon, GNOME Shell, Metacity, Unity, Xfwm'
+        "GTK+2, GTK+3\n"
+        "Cinnamon, GNOME Shell, Metacity, Unity, Xfwm"
     )
+    about_links = [
+        {
+            "name": translate("Homepage"),
+            "url": "https://github.com/nana-4/materia-theme/",
+        },
+    ]
+
     export_dialog = MateriaThemeExportDialog
     gtk_preview_dir = os.path.join(PLUGIN_DIR, "gtk_preview_css/")
     preview_sizes = {
@@ -106,56 +112,58 @@ class Plugin(OomoxThemePlugin):
     }
 
     enabled_keys_gtk = [
-        'BG',
-        'FG',
-        'HDR_BG',
-        'HDR_FG',
-        'SEL_BG',
+        "BG",
+        "FG",
+        "HDR_BG",
+        "HDR_FG",
+        "SEL_BG",
     ]
 
     enabled_keys_options = [
-        'ROUNDNESS',
+        "ROUNDNESS",
     ]
 
     theme_model_gtk = [
         {
-            'key': 'TXT_BG',
-            'type': 'color',
-            'fallback_key': 'BG',
-            'display_name': translate('View'),
+            "key": "TXT_BG",
+            "type": "color",
+            "fallback_key": "BG",
+            "display_name": translate("View"),
         },
         {
-            'key': 'BTN_BG',
-            'type': 'color',
-            'fallback_key': 'BG',
-            'display_name': translate('Surface (like Button, Menu, Popover)'),
+            "key": "BTN_BG",
+            "type": "color",
+            "fallback_key": "BG",
+            "display_name": translate("Surface (like Button, Menu, Popover)"),
         },
     ]
 
     theme_model_options = [
         {
-            'key': 'MATERIA_SELECTION_OPACITY',
-            'type': 'float',
-            'fallback_value': 0.32,
-            'max_value': 1.0,
-            'display_name': translate('Selection Opacity'),
+            "key": "MATERIA_SELECTION_OPACITY",
+            "type": "float",
+            "fallback_value": 0.32,
+            "max_value": 1.0,
+            "display_name": translate("Selection Opacity"),
         },
         {
-            'key': 'MATERIA_PANEL_OPACITY',
-            'type': 'float',
-            'fallback_value': 0.6,
-            'max_value': 1.0,
-            'display_name': translate('DE Panel Opacity'),
+            "key": "MATERIA_PANEL_OPACITY",
+            "type": "float",
+            "fallback_value": 0.6,
+            "max_value": 1.0,
+            "display_name": translate("DE Panel Opacity"),
         },
         {
-            'key': 'MATERIA_STYLE_COMPACT',
-            'type': 'bool',
-            'fallback_value': True,
-            'display_name': translate('Compact Style'),
+            "key": "MATERIA_STYLE_COMPACT",
+            "type": "bool",
+            "fallback_value": True,
+            "display_name": translate("Compact Style"),
         },
     ]
 
-    def preview_before_load_callback(self, preview_object, colorscheme):
+    def preview_before_load_callback(
+            self, preview_object: "ThemePreview", colorscheme: "ThemeT",
+    ) -> None:
         colorscheme["TXT_FG"] = colorscheme["FG"]
         colorscheme["WM_BORDER_FOCUS"] = colorscheme["HDR_BG"]
         colorscheme["WM_BORDER_UNFOCUS"] = colorscheme["BTN_BG"]

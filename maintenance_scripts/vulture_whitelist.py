@@ -1,18 +1,42 @@
-""" This file is licensed under GPLv3, see https://www.gnu.org/licenses/ """
+"""Licensed under GPLv3, see https://www.gnu.org/licenses/"""
 
 # pylint: disable=invalid-name,protected-access,pointless-statement
 
 from vulture.whitelist_utils import Whitelist  # pylint: disable=import-error,no-name-in-module
 
-
 whitelist = Whitelist()
 
 # typehints
-whitelist.typing.List
+whitelist.typing.Any
+whitelist.typing.BinaryIO
+whitelist.typing.Final
+whitelist.typing.IOStream
 whitelist.typing.Iterable
+whitelist.typing.Iterable
+whitelist.typing.Literal
+whitelist.typing.Mapping
+whitelist.typing.ModuleType
+whitelist.typing.MutableMapping
+whitelist.typing.NoReturn
 whitelist.typing.Optional
+whitelist.typing.Pattern
+whitelist.typing.Sequence
+whitelist.typing.TextIO
+whitelist.typing.TracebackType
+whitelist.typing.Tuple
+whitelist.typing.Type
+whitelist.color.HexColor
+whitelist.color.IntColor
 whitelist.theme_model.ThemeModel
-whitelist.plugin_api.ColorScheme
+whitelist.theme_model.ThemeModelValue.filter
+whitelist.theme_model.ThemeModelValue.reload_theme
+whitelist.theme_model.ThemeModelValue.reload_options
+whitelist.theme_file.PresetFile.default
+whitelist.theme_file.ThemeT
+
+whitelist.helpers.SortableT
+whitelist.helpers.DelayedPartialReturnT
+whitelist.helpers.DelayedPartialArgT
 
 # stdlib
 whitelist.Thread.daemon
@@ -25,6 +49,9 @@ whitelist.Gtk.Application.do_command_line
 whitelist.Gtk.Dialog.do_response
 
 # plugin api
+whitelist.AboutLink
+whitelist.AboutLink.name
+whitelist.AboutLink.url
 whitelist.OomoxPlugin.enabled_keys_gtk
 whitelist.OomoxPlugin.enabled_keys_options
 whitelist.OomoxPlugin.enabled_keys_icons

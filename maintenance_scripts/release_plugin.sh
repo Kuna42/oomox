@@ -12,6 +12,7 @@ readlink -e "$pkgbuild_path" > /dev/null
 
 aur_dev_repo_root=~/build/
 
+mkdir -p "${aur_dev_repo_root}/${pkg_name}"
 cp "$pkgbuild_path" "${aur_dev_repo_root}/${pkg_name}/PKGBUILD"
 cd "${aur_dev_repo_root}/${pkg_name}/"
 updpkgsums ; makepkg -fsr ; makepkg --printsrcinfo > .SRCINFO
@@ -52,7 +53,7 @@ echo
 if [[ "${answer}" = "y" ]] ; then
 	if [[ "$pkgbuild_path" == plugins/* ]] ; then
 		git -C "$plugin_dir_path" add "$relative_pkgbuild_path"
-		git -C "$plugin_dir_path" commit -m "chore: push release"
+		git -C "$plugin_dir_path" commit -m "chore: push release" || true
 		git -C "$plugin_dir_path" push ssh HEAD
 		#git -C "$plugin_dir_path" pull origin master
 	else
