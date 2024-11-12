@@ -56,7 +56,7 @@ def show_about(parent_window: Gtk.Window) -> None:
     about_window.show()
     plugins_box = builder.get_object("plugins_box")
 
-    def update_listbox_header(row: Gtk.ListBoxRow, before: bool) -> None:
+    def update_listbox_header(row: Gtk.ListBoxRow, before: bool) -> None:  # noqa: FBT001
         if before and not row.get_header():
             separator = Gtk.Separator(
                 orientation=Gtk.Orientation.HORIZONTAL,  # type: ignore[call-arg]
@@ -65,7 +65,7 @@ def show_about(parent_window: Gtk.Window) -> None:
             separator.set_margin_bottom(8)
             row.set_header(separator)
 
-    data: "Sequence[tuple[str, Mapping[str, OomoxPlugin]]]" = (
+    data: Sequence[tuple[str, Mapping[str, OomoxPlugin]]] = (
         (translate("Theme Plugins"), PluginLoader.get_theme_plugins()),
         (translate("Icon Plugins"), PluginLoader.get_icons_plugins()),
         (translate("Import Plugins"), PluginLoader.get_import_plugins()),

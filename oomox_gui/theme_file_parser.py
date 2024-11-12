@@ -32,9 +32,9 @@ def parse_theme_value(
         theme_value: "ThemeModelValue",
         colorscheme: "ThemeT",
 ) -> "ThemeValueT":
-    result_value: "ThemeValueT | None" = colorscheme.get(theme_value["key"])
+    result_value: ThemeValueT | None = colorscheme.get(theme_value["key"])
     fallback_key: str | None = theme_value.get("fallback_key")
-    fallback_value: "ThemeValueT | None" = theme_value.get("fallback_value")
+    fallback_value: ThemeValueT | None = theme_value.get("fallback_value")
     fallback_function = theme_value.get("fallback_function")
 
     if result_value is None:
@@ -81,7 +81,7 @@ def _set_fallback_values(
         theme_keys.append("NOGUI")
 
         with open(preset_path, encoding=DEFAULT_ENCODING) as file_object:
-            for line in file_object.readlines():
+            for line in file_object:
                 key, _sep, value = line.strip().partition("=")
                 if key.startswith("#") or key not in theme_keys:
                     continue

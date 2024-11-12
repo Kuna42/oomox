@@ -1,6 +1,8 @@
+import operator
 import os
 import shutil
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from .color import (
@@ -44,6 +46,7 @@ TerminalThemeT = dict[str, str]
 def find_closest_color_key(
         color_hex: str,
         colors_hex: TerminalThemeT,
+        *,
         highlight: bool = True,
 ) -> tuple[str | None, ColorDiff]:
     smallest_diff = SMALLEST_DIFF
@@ -51,9 +54,11 @@ def find_closest_color_key(
     highlight_keys = [f"color{i}" for i in range(8, 15 + 1)]
     for preset_key, preset_color in colors_hex.items():
         if (
+            (
                 highlight
-        ) and (
-            "color" not in preset_key
+            ) and (
+                "color" not in preset_key
+            )
         ) or (
             preset_key not in highlight_keys
         ):
@@ -68,21 +73,23 @@ def find_closest_color_key(
 
 def import_xcolors(path: str) -> dict[str, str]:
     hex_colors = {}
-    with open(os.path.expanduser(path), encoding=DEFAULT_ENCODING) as file_object:
-        for line in file_object.read().split("\n"):
-            if line.strip().startswith("!"):
-                continue
-            pair = [s.strip() for s in line.split(":")]
-            if len(pair) < 2:  # noqa: PLR2004
-                continue
-            key, value = pair
-            key = key.replace("*", "")
-            value = value.replace("#", "").lower()
-            for char in value:
-                if char not in VALID_COLOR_CHARS:
-                    break
-            else:
-                hex_colors[key] = value
+    text = Path(
+        os.path.expanduser(path),
+    ).read_text(encoding=DEFAULT_ENCODING)
+    for line in text.split("\n"):
+        if line.strip().startswith("!"):
+            continue
+        pair = [s.strip() for s in line.split(":")]
+        if len(pair) < 2:  # noqa: PLR2004
+            continue
+        key, value = pair
+        key = key.replace("*", "")
+        value = value.replace("#", "").lower()
+        for char in value:
+            if char not in VALID_COLOR_CHARS:
+                break
+        else:
+            hex_colors[key] = value
     return hex_colors
 
 
@@ -92,6 +99,7 @@ def generate_theme_from_hint(
         theme_bg: str,
         theme_fg: str,
         theme_hint: str | None = None,
+        *,
         auto_swap_colors: bool = True,
 ) -> TerminalThemeT:
     hex_colors = import_xcolors(template_path)
@@ -213,12 +221,13 @@ COLOR_DIFF_MARGIN: "Final" = 60
 COLOR_SIMILARITY_IMPORTANCE: "Final" = 2.5
 
 
-def _generate_theme_from_full_palette(  # noqa: E501  pylint: disable=too-many-nested-blocks,too-many-locals,too-many-statements,too-many-branches
+def _generate_theme_from_full_palette(  # pylint: disable=too-many-nested-blocks,too-many-locals,too-many-statements,too-many-branches  # noqa: E501,RUF100
         result_callback: "Callable[[TerminalThemeT], None]",
         reference_colors: dict[str, str],
         all_colors: list[str],
         theme_bg: str,
         accuracy: int | None = None,
+        *,
         extend_palette: bool = False,
 ) -> None:
     hex_colors = reference_colors
@@ -248,10 +257,9 @@ def _generate_theme_from_full_palette(  # noqa: E501  pylint: disable=too-many-n
         ] for key, value in hex_colors.items()
     }
     if extend_palette:
-        for color in all_colors[:]:
+        for color in all_colors.copy():
             for i in (20, 40, 60):
-                all_colors.append(hex_darker(color, i))
-                all_colors.append(hex_darker(color, -i))
+                all_colors.extend((hex_darker(color, i), hex_darker(color, -i)))
 
     grayest_colors = get_grayest_colors(all_colors)
     bright_colors_set = set(all_colors)
@@ -301,7 +309,7 @@ def _generate_theme_from_full_palette(  # noqa: E501  pylint: disable=too-many-n
                                     ),
                                 )
                             if (
-                                    (key not in ["color0", "color7", "color8", "color15"])
+                                    (key not in {"color0", "color7", "color8", "color15"})
                                     and (not min_lightness <= sum(new_value) <= max_lightness)
                             ):
                                 raise ContinueNext  # noqa: TRY301
@@ -383,11 +391,12 @@ def generate_theme_from_full_palette(  # pylint: disable=too-many-arguments,too-
         theme_bg: str,
         theme_fg: str,
         template_path: str,
-        app: "OomoxApplicationWindow",
         result_callback: "Callable[[TerminalThemeT], None]",
+        *,
         auto_swap_colors: bool = True,
         accuracy: int | None = None,
-        extend_palette: bool | None = None,
+        extend_palette: bool = False,
+        window: "OomoxApplicationWindow | None" = None,
         **kwargs: "Any",
 ) -> None:
 
@@ -412,7 +421,7 @@ def generate_theme_from_full_palette(  # pylint: disable=too-many-arguments,too-
     all_colors = sorted(get_all_colors_from_oomox_colorscheme(palette))
     cache_id = str(
         [
-            kwargs[name] for name in sorted(kwargs, key=lambda x: x[0])
+            kwargs[name] for name in sorted(kwargs, key=operator.itemgetter(0))
         ] + all_colors,
     ) + template_path + theme_bg + str(accuracy) + str(extend_palette)
 
@@ -428,17 +437,28 @@ def generate_theme_from_full_palette(  # pylint: disable=too-many-arguments,too-
             )
         # from time import time
         # before = time()
-        app.disable(translate("Generating terminal palette…"))
-        app.schedule_task(
-            _generate_theme_from_full_palette,
-            _callback,
-            reference_colors,
-            all_colors,
-            theme_bg,
-            accuracy,
-            extend_palette,
-        )
-        app.enable()
+        if window:
+            window.disable(translate("Generating terminal palette…"))
+            window.schedule_task(
+                lambda: _generate_theme_from_full_palette(
+                    _callback,
+                    reference_colors,
+                    all_colors,
+                    theme_bg,
+                    accuracy,
+                    extend_palette=extend_palette,
+                ),
+            )
+            window.enable()
+        else:
+            _generate_theme_from_full_palette(
+                _callback,
+                reference_colors,
+                all_colors,
+                theme_bg,
+                accuracy,
+                extend_palette=extend_palette,
+            )
         # print(time() - before)
 
 
@@ -461,8 +481,8 @@ def _generate_theme_from_full_palette_callback(
 
 def _generate_themes_from_oomox(
         original_colorscheme: "ThemeT",
-        app: "OomoxApplicationWindow",
         result_callback: "Callable[[ThemeT], None]",
+        window: "OomoxApplicationWindow | None" = None,
 ) -> None:
     colorscheme = {}
     colorscheme.update(original_colorscheme)
@@ -471,7 +491,7 @@ def _generate_themes_from_oomox(
     def _callback(term_colorscheme: TerminalThemeT) -> None:
         _generate_themes_from_oomox_callback(colorscheme, term_colorscheme, result_callback)
 
-    if colorscheme["TERMINAL_THEME_MODE"] in ("auto", ):
+    if colorscheme["TERMINAL_THEME_MODE"] == "auto":
         colorscheme["TERMINAL_ACCENT_COLOR"] = colorscheme["SEL_BG"]
         colorscheme["TERMINAL_BACKGROUND"] = colorscheme["TXT_BG"]
         colorscheme["TERMINAL_FOREGROUND"] = colorscheme["TXT_FG"]
@@ -502,11 +522,11 @@ def _generate_themes_from_oomox(
             auto_swap_colors=terminal_theme_auto_bgfg,
             extend_palette=terminal_theme_extend_palette,
             accuracy=255 + 8 - terminal_theme_accuracy,
-            app=app,
+            window=window,
             result_callback=_callback,
         )
         return
-    if colorscheme["TERMINAL_THEME_MODE"] in ("basic", "auto"):
+    if colorscheme["TERMINAL_THEME_MODE"] in {"basic", "auto"}:
         term_colorscheme = generate_theme_from_hint(
             template_path=os.path.join(
                 TERMINAL_TEMPLATE_DIR, terminal_base_template,
@@ -532,6 +552,8 @@ def _generate_themes_from_oomox_callback(
     if colorscheme["TERMINAL_THEME_MODE"] != "manual":
         colorscheme["TERMINAL_BACKGROUND"] = term_colorscheme["background"]
         colorscheme["TERMINAL_FOREGROUND"] = term_colorscheme["foreground"]
+        if "cursorColor" in term_colorscheme:
+            colorscheme["TERMINAL_CURSOR"] = term_colorscheme["cursorColor"]
     result_callback(colorscheme)
 
 
@@ -554,12 +576,12 @@ def generate_xrdb_theme_from_oomox(colorscheme: "ThemeT") -> TerminalThemeT:
 
 def generate_terminal_colors_for_oomox(
         colorscheme: "ThemeT",
-        app: "OomoxApplicationWindow",
         result_callback: "Callable[[ThemeT], None]",
+        window: "OomoxApplicationWindow | None" = None,
 ) -> None:
     _generate_themes_from_oomox(
         colorscheme,
-        app=app,
+        window=window,
         result_callback=result_callback,
     )
 
@@ -587,7 +609,7 @@ def cli() -> None:
     theme_fg = args[4]
     theme_hint = args[CliArgs.THEME_HINT] if len(args) > CliArgs.THEME_HINT else None
     auto_swap_colors = (
-        (args[CliArgs.AUTO_SWAP_COLORS] not in ["y", "yes", "true", "1"])
+        (args[CliArgs.AUTO_SWAP_COLORS] not in {"y", "yes", "true", "1"})
         if len(args) > CliArgs.AUTO_SWAP_COLORS else
         False
     )

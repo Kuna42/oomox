@@ -31,23 +31,24 @@ from oomox_gui.theme_model import get_first_theme_option
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
-    from typing import Annotated, Any
+    from types import ModuleType
+    from typing import Annotated, Any, Final
 
     from oomox_gui.color import HexColor, IntColor
     from oomox_gui.theme_file import ThemeT
 
 
-PLUGIN_DIR = os.path.dirname(os.path.realpath(__file__))
+PLUGIN_DIR: "Final" = os.path.dirname(os.path.realpath(__file__))
 
 
-LOW_QUALITY = 100
-MEDIUM_QUALITY = 200
-HIGH_QUALITY = 400
-# ULTRA_QUALITY = 1000
+LOW_QUALITY: "Final" = 100
+MEDIUM_QUALITY: "Final" = 200
+HIGH_QUALITY: "Final" = 400
+# ULTRA_QUALITY: "Final" = 1000
 
-ACCURACY = 40
+ACCURACY: "Final" = 40
 
-image_analyzer = get_plugin_module("ima", os.path.join(PLUGIN_DIR, "ima.py"))
+image_analyzer: "ModuleType" = get_plugin_module("ima", os.path.join(PLUGIN_DIR, "ima.py"))
 
 
 def sort_by_saturation(c: "IntColor") -> int:  # pylint: disable=invalid-name
@@ -413,6 +414,7 @@ class Plugin(OomoxImportPluginAsync):
     def _get_all_available_palettes(  # pylint: disable=too-many-locals
             cls,
             image_path: str,
+            *,
             use_whole_palette: bool,
             quality_per_plugin: "Annotated[Sequence[int], 3]",
     ) -> "list[HexColor]":
@@ -501,7 +503,7 @@ class Plugin(OomoxImportPluginAsync):
         theme_template: str = get_first_theme_option(  # type: ignore[assignment]
             "_PIL_THEME_TEMPLATE", {},
         ).get("fallback_value")
-        oomox_theme: dict[str, "Any"] = {}
+        oomox_theme: dict[str, Any] = {}
         oomox_theme.update(self.default_theme)
         if theme_template in self.default_themes:
             oomox_theme.update(self.default_themes[theme_template])
@@ -516,27 +518,33 @@ class Plugin(OomoxImportPluginAsync):
         callback(oomox_theme)
 
     @staticmethod
-    def _generate_palette_id(image_path: str, quality: str, use_whole_palette: bool) -> str:
+    def _generate_palette_id(image_path: str, quality: str, *, use_whole_palette: bool) -> str:
         return image_path + quality + str(use_whole_palette)
 
     @classmethod
     def _generate_terminal_palette(
             cls, template_path: str, image_path: str, quality: str,
+            *,
             use_whole_palette: bool, inverse_palette: bool,
             result_callback: "Callable[[dict[str, str]], None]",
     ) -> None:
         start_time = time()
-        _id = cls._generate_palette_id(image_path, quality, use_whole_palette)
+        _id = cls._generate_palette_id(image_path, quality, use_whole_palette=use_whole_palette)
         hex_palette = cls._palette_cache.get(_id)
         if hex_palette:
             cls._generate_terminal_palette_callback(
-                hex_palette, template_path, inverse_palette, result_callback,
+                hex_palette, template_path,
+                inverse_palette=inverse_palette,
+                result_callback=result_callback,
             )
         else:
             def generate_terminal_palette_task() -> None:
                 cls._generate_terminal_palette_task(
-                    template_path, image_path, quality, use_whole_palette, inverse_palette,
-                    start_time, result_callback,
+                    template_path, image_path, quality,
+                    use_whole_palette=use_whole_palette,
+                    inverse_palette=inverse_palette,
+                    start_time=start_time,
+                    result_callback=result_callback,
                 )
             try:
                 _app = OomoxApplicationWindow.get_instance()
@@ -549,6 +557,7 @@ class Plugin(OomoxImportPluginAsync):
     @classmethod
     def _generate_terminal_palette_task(
             cls, template_path: str, image_path: str, quality: str,
+            *,
             use_whole_palette: bool, inverse_palette: bool,
             start_time: float,
             result_callback: "Callable[[dict[str, str]], None]",
@@ -582,16 +591,21 @@ class Plugin(OomoxImportPluginAsync):
         print(
             f"{quality} quality, {len(hex_palette)} colors found, took {time() - start_time:.8f}s",
         )
-        _id = cls._generate_palette_id(image_path, quality, use_whole_palette)
+        _id = cls._generate_palette_id(image_path, quality, use_whole_palette=use_whole_palette)
         cls._palette_cache[_id] = hex_palette
         cls._generate_terminal_palette_callback(
-            hex_palette, template_path, inverse_palette, result_callback,
+            hex_palette, template_path,
+            inverse_palette=inverse_palette,
+            result_callback=result_callback,
         )
 
     @classmethod
     def _generate_terminal_palette_callback(  # pylint: disable=too-many-locals
-            cls, hex_palette: list[str],
-            template_path: str, inverse_palette: bool,
+            cls,
+            hex_palette: list[str],
+            template_path: str,
+            *,
+            inverse_palette: bool,
             result_callback: "Callable[[dict[str, str]], None]",
     ) -> None:
         gray_colors = get_gray_colors(hex_palette)
@@ -624,7 +638,7 @@ class Plugin(OomoxImportPluginAsync):
             max_lightness = max_possible_lightness - lightness_delta
 
         for key, value in reference_palette.items():
-            if key not in ["color0", "color7", "color8", "color15", "foreground", "background"]:
+            if key not in {"color0", "color7", "color8", "color15", "foreground", "background"}:
                 closest_color, _diff = find_closest_color(
                     value, bright_colors_list,
                     min_lightness=min_lightness, max_lightness=max_lightness,
@@ -657,7 +671,7 @@ class Plugin(OomoxImportPluginAsync):
 
         def _result_callback(generated_palette: dict[str, str]) -> None:
             cls._terminal_palette_cache[_id] = generated_palette
-            palette: "ThemeT" = {}
+            palette: ThemeT = {}
             palette.update(cls._terminal_palette_cache[_id])
             result_callback(palette)
 

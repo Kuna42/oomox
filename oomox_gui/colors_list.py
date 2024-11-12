@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from gi.repository import GLib, Gtk
@@ -247,7 +248,7 @@ class BoolListBoxRow(OomoxListBoxRow):
     def connect_changed_signal(self) -> None:
         self.changed_signal = self.value_widget.connect("notify::active", self.on_switch_activated)
 
-    def set_value(self, value: bool) -> None:  # type: ignore[override]
+    def set_value(self, value: bool) -> None:  # type: ignore[override]  # noqa: FBT001
         self.disconnect_changed_signal()
         self.value = value
         self.value_widget.set_active(value)
@@ -413,7 +414,7 @@ class ColorDropdown(Gtk.MenuButton):
 
     def build_dropdown_menu(self) -> Gtk.Menu:
         self.drop_down = Gtk.Menu()
-        menu_items: "list[tuple[Gtk.MenuItem, Callable[[Gtk.MenuItem], None]]]" = []
+        menu_items: list[tuple[Gtk.MenuItem, Callable[[Gtk.MenuItem], None]]] = []
         menu_items.append((
             Gtk.MenuItem(label=translate("Replace all instances")), self.replace_all_instances,
         ))
@@ -519,9 +520,8 @@ class ImagePathListBoxRow(OomoxListBoxRow):
     value_widget: ScaledImage
 
     def set_value(self, value: str) -> None:  # type: ignore[override]
-        with open(value, "rb") as image_file:
-            img_bytes = image_file.read()
-            self.value_widget.set_from_bytes(img_bytes)
+        img_bytes = Path(value).read_bytes()
+        self.value_widget.set_from_bytes(img_bytes)
 
     def __init__(
             self,
@@ -576,7 +576,7 @@ class SectionListBox(Gtk.Box):
         self.listbox = Gtk.ListBox()
         self.listbox.set_selection_mode(Gtk.SelectionMode.NONE)
 
-        def update_listbox_header(row: Gtk.ListBoxRow, before: bool) -> None:
+        def update_listbox_header(row: Gtk.ListBoxRow, before: bool) -> None:  # noqa: FBT001
             if before and not row.get_header():
                 row.set_header(
                     Gtk.Separator(  # type: ignore[call-arg]
@@ -651,11 +651,11 @@ class ThemeColorsList(Gtk.ScrolledWindow):
                             theme_option["fallback_value"] = value
                         self.theme = self.theme_reload_callback()
                     callbacks = [_callback]
-                elif theme_value.get("reload_options") or key in [
+                elif theme_value.get("reload_options") or key in {
                         "ICONS_STYLE", "THEME_STYLE",
                         "TERMINAL_BASE_TEMPLATE", "TERMINAL_THEME_MODE",
                         "TERMINAL_THEME_AUTO_BGFG", "TERMINAL_FG", "TERMINAL_BG",
-                ]:
+                }:
                     def _callback(  # pylint:disable=unused-argument
                             key: str,  # noqa: ARG001
                             value: "ThemeValueT",  # noqa: ARG001
@@ -764,16 +764,16 @@ class ThemeColorsList(Gtk.ScrolledWindow):
                 if (filter_func := theme_value.get("filter")) and not filter_func(theme):
                     row.hide()
                     continue
-                value_filter: "dict[str, ThemeValueT | list[ThemeValueT]] | None"
+                value_filter: dict[str, ThemeValueT | list[ThemeValueT]] | None
                 if (
                         (value_filter := theme_value.get("value_filter"))
                         and not check_value_filter(value_filter, theme)
                 ):
                     row.hide()
                     continue
-                if theme_value["type"] in (
+                if theme_value["type"] in {
                         "color", "options", "bool", "int", "float", "image_path",
-                ):
+                }:
                     if not isinstance(row, OomoxListBoxRow):
                         wrong_row_type = (
                             f"Row is of type {theme_value['type']}"

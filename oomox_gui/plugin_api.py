@@ -1,5 +1,5 @@
 import os
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING, ClassVar
 
@@ -24,8 +24,22 @@ if TYPE_CHECKING:
 
 PLUGIN_PATH_PREFIX: "Final" = "__plugin__"
 
+PLUGIN_API_VER: "Final[float]" = 1.1
 
-class OomoxPlugin(metaclass=ABCMeta):
+
+class OomoxPlugin(ABC):
+
+    supported_plugin_api_min: float = 1.0
+    supported_plugin_api_max: float = 1.2
+
+    def __init__(self) -> None:
+        if not self.supported_plugin_api_min <= PLUGIN_API_VER < self.supported_plugin_api_max:
+            message = (
+                f"Plugin require API ver from {self.supported_plugin_api_min}"
+                f" until {self.supported_plugin_api_max},"
+                f" while current API ver is {PLUGIN_API_VER}",
+            )
+            raise RuntimeError(message)
 
     @property
     @abstractmethod
@@ -36,6 +50,10 @@ class OomoxPlugin(metaclass=ABCMeta):
     @abstractmethod
     def display_name(self) -> str:
         pass
+
+    @property
+    def export_text(self) -> str | None:  # none is for compat with subclass
+        return self.display_name
 
     about_text: str | None = None
     about_links: ClassVar["list[AboutLink] | None"] = None
@@ -58,6 +76,8 @@ class OomoxThemePlugin(OomoxPlugin):
     def export_dialog(self) -> "type[ExportDialog]":
         pass
 
+    multi_export_supported: bool = True
+
     enabled_keys_gtk: ClassVar[list[str]] = []
     enabled_keys_options: ClassVar[list[str]] = []
     enabled_keys_extra: ClassVar[list[str]] = []
@@ -78,8 +98,8 @@ class OomoxThemePlugin(OomoxPlugin):
         PreviewImageboxesNames.CHECKBOX.name: 16,
     }
 
-    def preview_transform_function(
-            self,  # noqa: PLR6301
+    def preview_transform_function(  # noqa: PLR6301
+            self,
             svg_template: str,
             colorscheme: "ThemeT",
     ) -> str:
@@ -96,6 +116,7 @@ class OomoxIconsPlugin(OomoxPlugin):
 
     enabled_keys_icons: ClassVar[list[str]] = []
     theme_model_icons: ClassVar["list[ThemeModelValue]"] = []
+    multi_export_supported: bool = True
 
     @property
     @abstractmethod
@@ -123,6 +144,8 @@ class OomoxExportPlugin(OomoxPlugin):
     @abstractmethod
     def export_dialog(self) -> "type[ExportDialog]":
         pass
+
+    multi_export_supported: bool = True
 
     # Text to display in export menu:
     export_text: str | None = None

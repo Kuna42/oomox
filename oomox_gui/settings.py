@@ -19,12 +19,15 @@ class CommonOomoxConfig:
     config_path: str
     default_config: dict[str, str]
     config: dict[str, "Any"]
+    config_cache: dict[str, dict[str, "Any"]]
 
     def __init__(
             self,
             config_dir: str,
             config_name: str,
             default_config: dict[str, "Any"] | None = None,
+            override_config: dict[str, "Any"] | None = None,
+            *,
             force_reload: bool = False,
     ) -> None:
         self.name = config_name
@@ -34,7 +37,7 @@ class CommonOomoxConfig:
             f"{self.name}.json",
         )
         self.default_config = default_config or {}
-        self.config = self.load(
+        self.config = override_config or self.load(
             default_config=self.default_config,
             config_path=self.config_path,
             force_reload=force_reload,
@@ -51,18 +54,21 @@ class CommonOomoxConfig:
             cls,
             config_path: str,
             default_config: dict[str, "Any"],
+            *,
             force_reload: bool,
     ) -> dict[str, "Any"]:
         if force_reload or not getattr(cls, "config", None):
-            cls.config = default_config or {}
+            if not getattr(cls, "config_cache", None):
+                cls.config_cache = {}
+            cls.config_cache[config_path] = default_config or {}
             try:
                 with open(config_path, encoding=DEFAULT_ENCODING) as file_object:
                     for key, value in json.load(file_object).items():
-                        cls.config[key] = value
+                        cls.config_cache[config_path][key] = value
             except Exception as exc:
                 print(translate("Can't read config file"))
                 print(exc)
-        return cls.config
+        return cls.config_cache[config_path]
 
     def save(self) -> None:
         if not os.path.exists(self.config_dir):

@@ -1,11 +1,12 @@
 import os
 import subprocess
+from typing import Final
 
 from oomox_gui.config import DEFAULT_ENCODING
 from oomox_gui.plugin_api import OomoxImportPlugin
 from oomox_gui.theme_model import get_theme_model
 
-PLUGIN_DIR = os.path.dirname(os.path.realpath(__file__))
+PLUGIN_DIR: Final = os.path.dirname(os.path.realpath(__file__))
 
 
 class XrdbCache:
@@ -21,8 +22,8 @@ class XrdbCache:
         command = ["xrdb", "-query"]
 
         result = {}
-        with subprocess.Popen(
-            command,  # noqa: S603
+        with subprocess.Popen(  # noqa: S603
+            command,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         ) as proc:
@@ -66,7 +67,7 @@ class Plugin(OomoxImportPlugin):
         colorscheme = {}
 
         with open(preset_path, encoding=DEFAULT_ENCODING) as file_object:
-            for line in file_object.readlines():
+            for line in file_object:
                 key, _sep, value = line.strip().partition("=")
                 if key.startswith("#") or key not in theme_keys:
                     continue

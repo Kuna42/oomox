@@ -6,7 +6,7 @@ Themix GUI designer
 Graphical application for designing themes and exporting them using plugins, for example:
   * [Oomox](https://github.com/themix-project/oomox-gtk-theme/) and [Materia](https://github.com/nana-4/materia-theme/) themes (GTK2, GTK3, Cinnamon, GNOME, Openbox, Xfwm). Have a hack for HiDPI in gtk2.
   * Icons ([Archdroid](https://github.com/GreenRaccoon23/archdroid-icon-theme), [Gnome-Colors](https://www.gnome-look.org/p/1012497), [Numix](https://github.com/numixproject/numix-folders), [Papirus](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme), [Suru++](https://github.com/gusbemacbe/suru-plus) and [Suru++ Asprómauros](https://github.com/gusbemacbe/suru-plus-aspromauros)).
-  * Base16 plugin, which  also allows a lot of app themes support like Alacritty, Emacs, GTK4, KDE, VIM and [many](https://github.com/chriskempson/base16-templates-source) more.
+  * Base16 plugin, which  also allows a lot of app themes support like Alacritty, Emacs, GTK4, KDE, Qt5ct, Qt6ct, VIM and [many](https://github.com/chriskempson/base16-templates-source) more.
 
 Import plugins also available, such as:
   * generating color palettes from image;
@@ -21,16 +21,15 @@ Import plugins also available, such as:
 
 Table of contents:
   * [Installing with package manager](#installation "")
-  * [Installing manually](#other-distributions "")
-  * [Using with tiling WMs](#using-with-tiling-wms "")
-  * [Extra GTK3 CSS hacks](#extra-gtk3-css-hacks "")
-  * [CLI](#cli "")
-  * [Spotify](#spotify "")
+  * [Installing manually](https://github.com/themix-project/themix-gui/blob/master/docs_markdown/Manual_Installation.md)
+  * [CLI](https://github.com/themix-project/themix-gui/blob/master/docs_markdown/CLI.md)
+  * [Using with tiling WMs and other GTK3 CSS hacks](https://github.com/themix-project/themix-gui/blob/master/docs_markdown/CSS_Hacks.md)
+  * [Wiki](#wiki "")
   * [Review videos/Usage instructions](#review-articles-and-videos "")
 
-![Screenshot image import](https://raw.githubusercontent.com/themix-project/oomox/master/screenshots/pokedex_dawn.png "Screenshot image import")
+<img src="https://raw.githubusercontent.com/themix-project/oomox/master/screenshots/pokedex_dawn.png" alt="Screenshot image import" style="max-width: 886px;">
 
-![Screenshot GUI](https://raw.githubusercontent.com/themix-project/oomox/master/screenshots/screenshot_gui.png "Screenshot GUI")
+<img src="https://raw.githubusercontent.com/themix-project/oomox/master/screenshots/screenshot_gui.png" alt="Screenshot GUI" style="max-width: 843px;">
 
 [Big screenshot with number of generated themes 🔗](http://orig15.deviantart.net/e1ee/f/2016/320/1/9/oomox_1_0_rc1_by_actionless-daomhmd.jpg)
 
@@ -39,7 +38,6 @@ Table of contents:
 
 
 ## Installation
-
 
 
 ### Arch Linux
@@ -59,175 +57,36 @@ themix-gui
 ```
 
 
-
 ### Debian, Ubuntu, Linux Mint
 
 ##### deb-based releases are currently abandoned, this way works for installing older versions of Themix
 see also: https://github.com/themix-project/oomox/issues/144
 
-For Debian 9+, Ubuntu 17.04+ or Linux Mint 19+ you can download `oomox.deb` package here:
-https://github.com/themix-project/oomox/releases
-Make sure what `universe` repository is enabled.
-
-```sh
-sudo apt install ./oomox_VERSION_17.04+.deb  # or ./oomox_VERSION_18.10+.deb for Ubuntu 18.10+
-```
-
-Or, if you don't want to install third-party binary package you can build it on your own:
-
-```sh
-# with docker:
-sudo systemctl start docker
-sudo ./packaging/ubuntu/docker_ubuntu_package.sh  # sudo is not needed if your user is in docker group
-
-# or directly from ubuntu host if you don't like docker:
-./packaging/ubuntu/create_ubuntu_package.sh control
-# or ./packaging/ubuntu/create_ubuntu_package.sh control_1810
-```
-
-
-For older releases install the dependencies manually and next follow general installation instructions [below](#installation-1 "").
- - [List of dependencies](https://github.com/themix-project/oomox/blob/master/packaging/ubuntu/control#L5)
- - [How to install `sassc>=3.4`](https://askubuntu.com/questions/849057/how-to-install-libsass-on-ubuntu-16-04)
-
+[Old instructions for Deb-like distros](https://github.com/themix-project/themix-gui/blob/master/docs_markdown/Ubuntu_Old.md)
 
 
 ### Other distributions
 
-
-#### Prerequisites
-
-For GUI app itself:
- - `python3>=3.10`
- - `gtk3>=3.18`
- - `python3-gobject`
- - `gdk-pixbuf2`
-
-##### For plugins:
-
-Oomox theme:
- - `sassc>=3.4`
- - `rsvg-convert` from `librsvg`
- - `glib-compile-schemas` from `glib2`
- - `gdk-pixbuf2`
- - `bc`
- - `sed`
- - `find`
- - `grep`
-
-Materia theme (deprecated):
- - `sassc>=3.4`
- - `glib-compile-schemas` from `glib2`
- - `gdk-pixbuf2`
- - `sed`
- - `find`
- - `grep`
- - `optipng`
- - `gtk2-engine-murrine`
- - `inkscape` (or `resvg`, but it's currently disabled)
- - `parallel`
- - `meson`
-
-Gnome-Colors icons:
- - `bc`
- - `sed`
- - `find`
- - `grep`
- - `rsvg-convert` from `librsvg`
- - `imagemagick`
- - `breeze-icons` - optional, to provide more fallbacks
-
-Archdroid, Papirus and Suru++ icons:
- - `sed`
- - `find`
- - `breeze-icons` - optional for Archdroid, to provide more fallbacks
-
-Spotify theme:
- - `polkit` or `gksu`
- - `zip`
- - `bc`
- - `grep`
-
-Import colors from images:
- - `python3 PIL or Pillow`
- - `python3 colorz` - optional, extra image analyzer
- - `python3 colorthief` - optional, extra image analyzer
- - `python3 haishoku` - optional, extra image analyzer
-
-Base16 format support:
- - `python3 pystache`
- - `python3 yaml`
-
-Xresources import:
- - `xorg-xrdb` - optional, for xresources themes
+[Install it manually or use that information for creating a package for your distro](https://github.com/themix-project/themix-gui/blob/master/docs_markdown/Manual_Installation.md)
 
 
-#### Installation
 
-```sh
-git clone https://github.com/themix-project/oomox.git --recursive
-cd oomox
-# if you need to generate locales:
-make -f po.mk install
+
+
+
+## Other Help Resources
+
+[Using with tiling WMs and other GTK3 CSS hacks](https://github.com/themix-project/themix-gui/blob/master/docs_markdown/CSS_Hacks.md)
+
+
+### Wiki
+
+[https://github.com/themix-project/themix-gui/wiki](https://github.com/themix-project/themix-gui/wiki)
+
+Direct file editing:
+
 ```
-
-#### Running
-
-```sh
-./gui.sh
-```
-
-After exporting a theme select the generated theme (oomox-YOUR-THEME-NAME) in your appearance config tool (for example, `lxappearance` or `gnome-tweak-tool`).
-
-
-### CLI
-
-If your prefer CLI interface, refer to `change_color.sh` scripts inside `./plugins/`. For `xresources` and `random` themes in CLI use palettes from `/opt/oomox/scripted_colors/` directory. Using scripted palettes enables you to use bash to write simple generators for dynamic themes (as alternative to plugins in oomox-gui). GUI is not attempting to execute any scripted palettes with bash because downloading such scripted themes from random places could lead to unexpected result so you can use them only with CLI, when you really know what you're doing.
-
-
-
-#### Spotify:
-
-Spotify theme can be also exported from GUI, but if you prefer commandline interface:
-
-```sh
-./plugins/oomoxify/oomoxify.sh ./colors/gnome-colors/shiki-noble
-```
-
-Also you can normalize font weight with `-w` argument, see `-h` for usage.
-
-Spotify theme settings are backed up to `~/.config/oomox/spotify_backup`. To undo the changes made by oomoxify, these files can be copied back to their original location `/usr/share/spotify/Apps`. Spotify can also be reinstalled, which will reset these files as well.
-
-Users running Spotify under Flatpak should set their "Spotify path" in oomox to `/var/lib/flatpak/app/com.spotify.Client/current/active/files/extra/share/spotify/Apps` in order to apply the theme.
-
-
-### Using with tiling WMs
-
-Create/append to `~/.config/gtk-3.0/gtk.css`:
-
-```css
-/* remove window title from Client-Side Decorations */
-.solid-csd headerbar .title {
-    font-size: 0;
-}
-
-/* hide extra window decorations/double border */
-window decoration {
-    margin: 0;
-    border: none;
-    padding: 0;
-}
-```
-
-
-### Extra GTK3 CSS hacks
-
-Create/append to `~/.config/gtk-3.0/gtk.css`:
-
-```css
-* {
-  text-shadow: none;
-}
+git clone git@github.com:themix-project/themix-gui.wiki.git
 ```
 
 

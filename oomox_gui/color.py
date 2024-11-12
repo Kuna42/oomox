@@ -1,3 +1,4 @@
+import operator
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Annotated
 
@@ -24,12 +25,14 @@ def hex_to_int(text: "HexColor") -> int:
     return int(f"0x{text}", 0)
 
 
-def int_to_hex(num: int | float) -> "HexColor":
+def int_to_hex(num: float) -> "HexColor":
     return f"{int(num):02x}"
 
 
 def color_list_from_hex(color_text: "HexColor") -> "tuple[str, str, str]":
-    return (color_text[:2], color_text[2:4], color_text[4:])
+    result: tuple[str, str, str]
+    result = operator.itemgetter(slice(2), slice(2, 4), slice(4, 6))(color_text)
+    return result
 
 
 def int_list_from_hex(color_text: "HexColor") -> "IntColor":
@@ -71,9 +74,9 @@ RGB_CHANNELS: "Final[list[str]]" = ["r", "g", "b"]
 
 
 class ColorDiff:
-    r: int  # pylint: disable=invalid-name
-    g: int  # pylint: disable=invalid-name
-    b: int  # pylint: disable=invalid-name
+    r: int
+    g: int
+    b: int
 
     @property
     def color_list(self) -> "IntColor":

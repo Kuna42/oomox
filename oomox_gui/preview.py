@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from gi.repository import GLib, Gtk
@@ -105,10 +106,10 @@ class PreviewWidgets(Gtk.Box):
 
         self.menubar = Gtk.MenuBar()
         menuitem1 = Gtk.MenuItem(label=translate("File"))
-        menuitem1.set_submenu(self.create_menu(3, True))
+        menuitem1.set_submenu(self.create_menu(3, has_submenus=True))
         self.menubar.append(menuitem1)  # type: ignore[attr-defined]
         menuitem2 = Gtk.MenuItem(label=translate("Edit"))
-        menuitem2.set_submenu(self.create_menu(6, True))
+        menuitem2.set_submenu(self.create_menu(6, has_submenus=True))
         self.menubar.append(menuitem2)  # type: ignore[attr-defined]
 
         headerbox.pack_start(self.headerbar, True, True, 0)
@@ -143,7 +144,7 @@ class PreviewWidgets(Gtk.Box):
         self.pack_start(headerbox, True, True, 0)
         self.pack_start(self.grid, True, True, 0)
 
-    def create_menu(self, n_items: int, has_submenus: bool = False) -> Gtk.Menu:
+    def create_menu(self, n_items: int, *, has_submenus: bool = False) -> Gtk.Menu:
         menu = Gtk.Menu()
         for i in range(n_items):
             sensitive = (i + 1) % 3 != 0
@@ -160,13 +161,10 @@ class PreviewWidgets(Gtk.Box):
     def load_imageboxes_templates(self, theme_plugin: "OomoxThemePlugin") -> None:
         for icon in theme_plugin.PreviewImageboxesNames:
             template_path = f"{icon.value}.svg.template"
-            with open(
-                    os.path.join(
-                        theme_plugin.gtk_preview_dir, template_path,
-                    ), "rb",
-            ) as file_object:
-                self.preview_imageboxes_templates[icon.name] = \
-                    file_object.read().decode(DEFAULT_ENCODING)
+            data = Path(
+                Path(theme_plugin.gtk_preview_dir) / Path(template_path),
+            ).read_bytes()
+            self.preview_imageboxes_templates[icon.name] = data.decode(DEFAULT_ENCODING)
 
     def update_preview_imageboxes(
             self, colorscheme: "ThemeT", theme_plugin: "OomoxThemePlugin",
@@ -261,13 +259,13 @@ class ThemePreview(Gtk.Grid):
 
     def update_preview_carets(self, colorscheme: "ThemeT") -> None:
         self.css_providers.caret.load_from_data((
-            (Gtk.get_minor_version() >= GTK_320_POSTFIX and """
+            ((Gtk.get_minor_version() >= GTK_320_POSTFIX and """
             * {{
                 caret-color: #{primary_caret_color};
                 -gtk-secondary-caret-color: #{secondary_caret_color};
                 -GtkWidget-cursor-aspect-ratio: {caret_aspect_ratio};
             }}
-            """ or """
+            """) or """
             * {{
                 -GtkWidget-cursor-color: #{primary_caret_color};
                 -GtkWidget-secondary-cursor-color: #{secondary_caret_color};
@@ -500,7 +498,7 @@ class ThemePreview(Gtk.Grid):
             theme_plugin: "OomoxThemePlugin | None",
             icons_plugin: "OomoxIconsPlugin | None",
     ) -> None:
-        colorscheme_with_fallbacks: "ThemeT" = {}
+        colorscheme_with_fallbacks: ThemeT = {}
         for section in get_theme_model().values():
             for theme_value in section:
                 if "key" not in theme_value:

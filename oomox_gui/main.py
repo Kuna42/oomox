@@ -18,11 +18,14 @@ from .gtk_helpers import (
     EntryDialog,
     ImageButton,
     ImageMenuButton,
+    WindowWithActions,
     YesNoDialog,
+    dialog_is_yes,
     warn_once,
 )
 from .helpers import log_error, mkdir_p
 from .i18n import translate
+from .multi_export import MultiExportDialog
 from .plugin_api import PLUGIN_PATH_PREFIX
 from .plugin_loader import PluginLoader
 from .preset_list import ThemePresetList
@@ -117,10 +120,6 @@ class RemoveDialog(YesNoDialog):
         )
 
 
-def dialog_is_yes(dialog: Gtk.Dialog) -> bool:
-    return dialog.run() in (Gtk.ResponseType.YES, Gtk.ResponseType.OK)
-
-
 class AppActions(ActionsEnum):
     _target = "app"
     quit_action = ActionProperty(_target, "quit")
@@ -131,6 +130,7 @@ class WindowActions(ActionsEnum):
     import_menu = ActionProperty(_target, "import_menu")
     import_themix_colors = ActionProperty(_target, "import_themix_colors")
     clone = ActionProperty(_target, "clone")
+    multi_export = ActionProperty(_target, "multi_export")
     export_icons = ActionProperty(_target, "icons")
     export_theme = ActionProperty(_target, "theme")
     export_menu = ActionProperty(_target, "export_menu")
@@ -142,39 +142,7 @@ class WindowActions(ActionsEnum):
     show_about = ActionProperty(_target, "show_about")
 
 
-class WindowWithActions(Gtk.ApplicationWindow):
-
-    def _action_tooltip(self, action: ActionProperty, tooltip: str) -> str:
-        action_id = action.get_id()
-        app = self.get_application()
-        if not app:
-            no_app_error = "Application instance didn't initialized."
-            raise RuntimeError(no_app_error)
-        accels = app.get_accels_for_action(action_id)
-        if accels:
-            key, mods = Gtk.accelerator_parse(accels[0])
-            tooltip += f" ({Gtk.accelerator_get_label(key, mods)})"
-        return tooltip
-
-    def attach_action(
-            self, widget: Gtk.Widget, action: ActionProperty, with_tooltip: bool = True,
-    ) -> None:
-        action_id = action.get_id()
-        widget.set_action_name(action_id)  # type: ignore[attr-defined]
-        if with_tooltip:
-            tooltip = self._action_tooltip(action, widget.get_tooltip_text() or "")
-            widget.set_tooltip_text(tooltip)
-
-    def add_simple_action(
-            self, action_name: str, callback: "Callable[..., Any]",
-    ) -> Gio.SimpleAction:
-        action = Gio.SimpleAction.new(action_name, None)
-        action.connect("activate", callback)
-        self.add_action(action)
-        return action
-
-
-class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-instance-attributes,too-many-public-methods  # noqa: E501
+class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-instance-attributes
 
     colorscheme_name: str
     colorscheme_path: str
@@ -201,7 +169,7 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
     spinner_revealer: Gtk.Revealer
     paned_box: Gtk.Paned
 
-    _currently_focused_widget = Gtk.Widget | None
+    _currently_focused_widget: Gtk.Widget | None = None
     _inhibit_id: int | None = None
 
     def _unset_save_needed(self) -> None:
@@ -268,9 +236,9 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
             Gtk.FileChooserAction.OPEN,  # type: ignore[arg-type]
         )
         filechooser_response = filechooser_dialog.run()
-        if filechooser_response in (
+        if filechooser_response in {
                 Gtk.ResponseType.CANCEL, Gtk.ResponseType.DELETE_EVENT,
-        ):
+        }:
             filechooser_dialog.destroy()
             return
         import_theme_path = filechooser_dialog.get_filename()
@@ -297,9 +265,9 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
             Gtk.FileChooserAction.OPEN,  # type: ignore[arg-type]
         )
         filechooser_response = filechooser_dialog.run()
-        if filechooser_response in (
+        if filechooser_response in {
                 Gtk.ResponseType.CANCEL, Gtk.ResponseType.DELETE_EVENT,
-        ):
+        }:
             filechooser_dialog.destroy()
             return
         import_theme_path = filechooser_dialog.get_filename()
@@ -442,7 +410,7 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
 
         generate_terminal_colors_for_oomox(
             self.colorscheme,
-            app=self,
+            window=self,
             result_callback=_generate_terminal_colors,
         )
 
@@ -474,7 +442,7 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
             self.spinner_revealer.set_reveal_child(False)
             self.preset_list.set_sensitive(True)
             self.theme_edit.set_sensitive(True)
-            self.set_focus(self._currently_focused_widget)  # type: ignore[arg-type]
+            self.set_focus(self._currently_focused_widget)
             self.spinner.stop()
 
         GLib.idle_add(enable_ui_callback, priority=GLib.PRIORITY_LOW)
@@ -509,6 +477,21 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
     def _on_save(self, _action: Gio.SimpleAction, _param: "Any" = None) -> None:
         self.save_theme()
 
+    def _on_export_multi(self, _action: Gio.SimpleAction, _param: "Any" = None) -> None:
+        if not self.plugin_theme:
+            no_theme_plugin_error = "No Theme plugin selected"
+            raise RuntimeError(no_theme_plugin_error)
+        MultiExportDialog(
+            transient_for=self,
+            theme_name=self.colorscheme_name,
+            colorscheme=self.colorscheme,
+            # test_export=self.plugin_theme.export_dialog(
+            #     transient_for=self,
+            #     theme_name=self.colorscheme_name,
+            #     colorscheme=self.colorscheme,
+            # ),
+        )
+
     def _on_export_theme(self, _action: Gio.SimpleAction, _param: "Any" = None) -> None:
         if not self.plugin_theme:
             no_theme_plugin_error = "No Theme plugin selected"
@@ -517,6 +500,7 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
             transient_for=self,
             theme_name=self.colorscheme_name,
             colorscheme=self.colorscheme,
+            plugin=self.plugin_theme,
         )
 
     def _on_export_icontheme(self, _action: Gio.SimpleAction, _param: "Any" = None) -> None:
@@ -527,6 +511,7 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
             transient_for=self,
             theme_name=self.colorscheme_name,
             colorscheme=self.colorscheme,
+            plugin=self.plugin_icons,
         )
 
     def _on_export_plugin(self, action: Gio.SimpleAction, _param: "Any" = None) -> None:
@@ -537,12 +522,14 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
             transient_for=self,
             theme_name=self.colorscheme_name,
             colorscheme=self.colorscheme,
+            plugin=plugin,
         )
 
     def _before_quit(self) -> None:
         self.ask_unsaved_changes()
-        self.ui_settings.window_width, self.ui_settings.window_height = self.get_size()
-        self.ui_settings.save()
+        if self.show_window:
+            self.ui_settings.window_width, self.ui_settings.window_height = self.get_size()
+            self.ui_settings.save()
 
     def _on_quit(self, _arg1: "Any" = None, _arg2: "Any" = None) -> None:
         self._before_quit()
@@ -662,6 +649,13 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
 
         #
 
+        multi_export_button = Gtk.Button(
+            label=translate("_Multi-Export…"),
+            use_underline=True,
+            tooltip_text=translate("Export theme for multiple frameworks or apps at once"),
+        )
+        self.attach_action(multi_export_button, WindowActions.multi_export)
+
         export_theme_button = Gtk.Button(
             label=translate("_Export Theme…"),
             use_underline=True,
@@ -699,6 +693,7 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
         Gtk.StyleContext.add_class(
             linked_export_box.get_style_context(), "linked",
         )
+        linked_export_box.add(multi_export_button)
         linked_export_box.add(export_theme_button)
         linked_export_box.add(export_icons_button)
         linked_export_box.add(export_button)
@@ -758,6 +753,7 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
         self.action_save = self.add_simple_action(WindowActions.save, self._on_save)
         self.action_rename = self.add_simple_action(WindowActions.rename, self._on_rename)
         self.action_remove = self.add_simple_action(WindowActions.remove, self._on_remove)
+        self.add_simple_action(WindowActions.multi_export, self._on_export_multi)
         self.add_simple_action(WindowActions.export_theme, self._on_export_theme)
         self.add_simple_action(WindowActions.export_icons, self._on_export_icontheme)
         self.add_simple_action(WindowActions.show_help, self._on_show_help)
@@ -785,7 +781,7 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
             raise NoWindowError
         return cls._window_instance
 
-    def __init__(self, application: "OomoxGtkApplication") -> None:
+    def __init__(self, application: "OomoxGtkApplication", *, show_window: bool = True) -> None:
         super().__init__(
             application=application,
             title=translate("Themix GUI"),
@@ -796,6 +792,11 @@ class OomoxApplicationWindow(WindowWithActions):  # pylint: disable=too-many-ins
         self.colorscheme = {}
         mkdir_p(USER_COLORS_DIR)
         self.ui_settings = UISettings()
+        self.show_window = show_window
+        if not self.show_window:
+            self.add(Gtk.Label(translate("Multi-Export in progress...")))
+            self.show_all()
+            return
 
         self._init_actions()
         self._init_window()
@@ -829,7 +830,7 @@ class OomoxGtkApplication(Gtk.Application):
 
     window: OomoxApplicationWindow | None = None
 
-    def __init__(self) -> None:
+    def __init__(self, *, show_window: bool = True) -> None:
         super().__init__(
             application_id="com.github.themix_project.Oomox",
             flags=(
@@ -837,6 +838,7 @@ class OomoxGtkApplication(Gtk.Application):
                 Gio.ApplicationFlags.NON_UNIQUE
             ),
         )
+        self.show_window = show_window
         # @TODO: use oomox-gui as the only one entrypoint to all cli tools
         # self.add_main_option("test", ord("t"), GLib.OptionFlags.NONE,
         # GLib.OptionArg.NONE, "Command line test", None)
@@ -876,6 +878,7 @@ class OomoxGtkApplication(Gtk.Application):
         set_accels_for_action(WindowActions.save, ["<Primary>S"])
         set_accels_for_action(WindowActions.rename, ["F2"])
         set_accels_for_action(WindowActions.remove, ["<Primary>Delete"])
+        set_accels_for_action(WindowActions.multi_export, ["<Primary>Return"])
         set_accels_for_action(WindowActions.export_theme, ["<Primary>E"])
         set_accels_for_action(WindowActions.export_icons, ["<Primary>I"])
         set_accels_for_action(WindowActions.export_menu, ["<Primary>O"])
@@ -883,9 +886,9 @@ class OomoxGtkApplication(Gtk.Application):
         set_accels_for_action(WindowActions.show_help, ["<Primary>question"])
 
         _plugin_shortcuts: dict[str, str] = {}
-        import_and_export_plugins: """Sequence[
-                tuple[Mapping[str, OomoxImportPlugin | OomoxExportPlugin], str]
-        ]""" = (
+        import_and_export_plugins: Sequence[
+            tuple[Mapping[str, OomoxImportPlugin | OomoxExportPlugin], str]
+        ] = (
             (PluginLoader.get_import_plugins(), "import_plugin_{}"),
             (PluginLoader.get_export_plugins(), "export_plugin_{}"),
         )
@@ -936,7 +939,7 @@ class OomoxGtkApplication(Gtk.Application):
 
     def do_activate(self) -> None:  # pylint: disable=arguments-differ
         if not self.window:
-            self.window = OomoxApplicationWindow(application=self)
+            self.window = OomoxApplicationWindow(application=self, show_window=self.show_window)
         self.window.present()
 
     def do_command_line(self, _command_line: None) -> int:  # pylint: disable=arguments-differ
@@ -946,7 +949,7 @@ class OomoxGtkApplication(Gtk.Application):
         self.activate()
         return 0
 
-    def quit(self) -> None:  # pylint: disable=arguments-differ  # noqa: A003
+    def quit(self) -> None:  # pylint: disable=arguments-differ
         if self.window:
             self.window.close()
         else:

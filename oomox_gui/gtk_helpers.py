@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, ClassVar
 
 from gi.repository import GdkPixbuf, Gio, GLib, Gtk
@@ -7,12 +7,15 @@ from gi.types import GObjectMeta
 from .i18n import translate
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Any
 
     from gi.repository import Pango
 
 
 class ActionProperty(str):
+
+    __slots__ = ("name", "target")
 
     target: str
     name: str
@@ -24,10 +27,10 @@ class ActionProperty(str):
         return obj
 
     def get_id(self) -> str:
-        return ".".join([self.target, self.name])
+        return f"{self.target}.{self.name}"
 
 
-class ActionsEnum(metaclass=ABCMeta):
+class ActionsEnum(ABC):
 
     @property
     @abstractmethod
@@ -236,6 +239,10 @@ class YesNoDialog(Gtk.Dialog):
         self.show_all()
 
 
+def dialog_is_yes(dialog: Gtk.Dialog) -> bool:
+    return dialog.run() in {Gtk.ResponseType.YES, Gtk.ResponseType.OK}
+
+
 class GObjectABCMetaAbstractProperty:
     pass
 
@@ -263,20 +270,42 @@ class GObjectABCMeta(GObjectMeta, type):
                 )
         ):
             required_methods = getattr(cls, cls.ABS_METHODS, [])
-            missing_methods = []
-            for method_name in required_methods:
+            missing_methods = [
+                method_name
+                for method_name in required_methods
                 if (
-                        not any(method_name in B.__dict__ for B in cls.__mro__)
+                    not any(method_name in B.__dict__ for B in cls.__mro__)
                 ) and (
                     method_name not in this_required_methods
-                ):
-                    missing_methods.append(method_name)
+                )
+            ]
             if missing_methods:
                 missing_methods_error = (
                     f"Can't instantiate abstract class {cls.__name__}"
-                    f" with abstract methods {','.join(missing_methods)}",
+                    f" without abstract methods {','.join(set(missing_methods))}",
                 )
                 raise TypeError(missing_methods_error)
+
+
+def nongobject_check_class_for_gobject_metas(cls: type) -> None:
+    meta_properties = set()
+    for klass in cls.__mro__:
+        for key, value in klass.__dict__.items():
+            if (
+                value is GObjectABCMetaAbstractProperty
+            ):
+                meta_properties.add(key)
+    missing_methods = set()
+    for key in meta_properties:
+        value = getattr(cls, key)
+        if value is GObjectABCMetaAbstractProperty:
+            missing_methods.add(key)
+    if missing_methods:
+        missing_methods_error = (
+            f"Can't instantiate abstract class {cls.__name__}"
+            f" without abstract methods {','.join(set(missing_methods))}",
+        )
+        raise TypeError(missing_methods_error)
 
 
 def g_abstractproperty(_function: "Any") -> "type[GObjectABCMetaAbstractProperty]":
@@ -318,3 +347,37 @@ def warn_once(
     dialog.run()
     dialog.add_shown(text, secondary_text, buttons)
     dialog.destroy()
+
+
+class WindowWithActions(Gtk.ApplicationWindow):
+
+    def _action_tooltip(self, action: ActionProperty, tooltip: str) -> str:
+        action_id = action.get_id()
+        app = self.get_application()
+        if not app:
+            no_app_error = "Application instance didn't initialized."
+            raise RuntimeError(no_app_error)
+        accels = app.get_accels_for_action(action_id)
+        if accels:
+            key, mods = Gtk.accelerator_parse(accels[0])
+            tooltip += f" ({Gtk.accelerator_get_label(key, mods)})"
+        return tooltip
+
+    def attach_action(
+            self, widget: Gtk.Widget, action: ActionProperty,
+            *,
+            with_tooltip: bool = True,
+    ) -> None:
+        action_id = action.get_id()
+        widget.set_action_name(action_id)  # type: ignore[attr-defined]
+        if with_tooltip:
+            tooltip = self._action_tooltip(action, widget.get_tooltip_text() or "")
+            widget.set_tooltip_text(tooltip)
+
+    def add_simple_action(
+            self, action_name: str, callback: "Callable[..., Any]",
+    ) -> Gio.SimpleAction:
+        action = Gio.SimpleAction.new(action_name, None)
+        action.connect("activate", callback)
+        self.add_action(action)
+        return action
